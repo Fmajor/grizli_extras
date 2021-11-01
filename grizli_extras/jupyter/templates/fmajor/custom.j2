@@ -1,0 +1,17 @@
+{% if resources.get('custom_script') %}
+<script type="text/javascript" id="custom_script">
+{{ resources.get('custom_script') }}
+</script>
+{% else %}
+<script type="text/javascript" id="custom_script">
+</script>
+{% endif %}
+
+{% if resources.get('custom_css') %}
+<style type="text/css" id="custom_style">
+{{ resources.get('custom_css') }}
+</style>
+{% else %}
+<style type="text/css" id="custom_style">
+</style>
+{% endif %}
