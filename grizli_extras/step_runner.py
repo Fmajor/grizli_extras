@@ -519,16 +519,19 @@ class NB(object):
     nb.nb = nb_json
     nb.file = file
     return nb
-  def __init__(self, file=None):
+  def __init__(self, file=None, new=False):
     self.file = file
-    if file is not None:
-      if os.path.exists(file):
-        with open(file) as f:
-          self.nb = nbformat.read(f, 4)
+    if new:
+      self.nb = nbf.v4.new_notebook()
+    else:
+      if file is not None:
+        if os.path.exists(file):
+          with open(file) as f:
+            self.nb = nbformat.read(f, 4)
+        else:
+          self.nb = nbf.v4.new_notebook()
       else:
         self.nb = nbf.v4.new_notebook()
-    else:
-      self.nb = nbf.v4.new_notebook()
   def add_code(self, code='', *, name=None, collapsed=None, scrolled=None, hide_source=None, hide_output=None):
     cell = nbf.v4.new_code_cell(code)
     if collapsed is not None:
