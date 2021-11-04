@@ -837,7 +837,7 @@ def plot_all_beams(filename, save=True, show=False, type="res", figsize=13):
       fig.savefig(outfile)
     if not show:
       plt.close(fig)
-def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '2D', 'redshift'], figsize=None):
+def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '2D', 'redshift'], only_flux=False, figsize=None):
   result = {}
   name = '{0}_{1:05d}.full.fits'.format(root_name, id)
   if os.path.exists(name) and 'redshift' in models:
@@ -1001,8 +1001,9 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
         #ax.plot(wave, flux/flat, color=colors[fname], label='{} flux'.format(fname), ls='-', lw=2, alpha=0.5)
         ax.scatter(wave, flux/flat, color=colors[fname], label='{} flux (data)'.format(fname), marker='.', alpha=0.3, s=50)
         ax.errorbar(wave, flux/flat, err/flat, color=colors[fname], alpha=0.3, ls='none')
-        ax.plot(wave, cont/flat, color=colors[fname], label='{} cont (2D model)'.format(fname), ls='--', lw=3)
-        ax.plot(wave, (line)/flat, color=colors[fname], label='{} cont+line (2D model)'.format(fname), ls=':', lw=3)
+        if not only_flux:
+          ax.plot(wave, cont/flat, color=colors[fname], label='{} cont (2D model)'.format(fname), ls='--', lw=3)
+          ax.plot(wave, (line)/flat, color=colors[fname], label='{} cont+line (2D model)'.format(fname), ls=':', lw=3)
     if mbplots_sci is not None:
       for i, (wave, flux, err) in enumerate(mbplots_sci):
         if i==0:
