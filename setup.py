@@ -12,7 +12,7 @@ name="grizli_extras"
 version="0.0.1"
 packages = ["grizli_extras"]
 install_requires=[
-  "jupyterlab",
+  "jupyterlab==3.1.13", # 4.0.0beta have bug
   'ipython',
   'matplotlib',
   'numpy',
