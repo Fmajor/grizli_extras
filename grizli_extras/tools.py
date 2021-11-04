@@ -272,6 +272,9 @@ def zscale_imshow(data,
             imshow(ax, dcol)
   return fig
 
+def test():
+  print('kuku')
+
 def show_flt_images(flt, figsize=(15,7.5)):
   z = ZScaleInterval()
   filter = flt.grism.filter
@@ -835,6 +838,7 @@ def plot_all_beams(filename, save=True, show=False, type="res", figsize=13):
     if not show:
       plt.close(fig)
 def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '2D', 'redshift'], figsize=None):
+  result = {}
   name = '{0}_{1:05d}.full.fits'.format(root_name, id)
   if os.path.exists(name) and 'redshift' in models:
     from astropy.table import Table
@@ -977,8 +981,16 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
         fname = ext.header['EXTNAME']
         d = f30[fname].data
         wave,flux,cont,line,flat,err = d['wave'], d['flux'], d['cont'], d['line'], d['flat'], d['err']
-        ax.scatter(wave, flux/flat, color=colors[fname], label='{} R30'.format(fname))
+        ax.scatter(wave, flux/flat, color=colors[fname], label='{} R30'.format(fname), marker="^")
         ax.errorbar(wave, flux/flat, err/flat, ls='none', color=colors[fname],)
+    name = '{0}_{1:05d}.full.fits'.format(root_name, id)
+    if os.path.exists(name) and 'TEMP' in models:
+      ff  = fits.open(name)
+      temp = ff['TEMPL'].data
+      wave, cont, full = temp['wave'], temp['continuum'], temp['full']
+      mask = (wave>8000)&(wave<17000)
+      ax.plot(wave[mask], full[mask], alpha=0.4, color='cyan', label='temp cont+line (1D model)', ls=':', lw=4)
+      ax.plot(wave[mask], cont[mask], alpha=0.4, color='brown',  label='temp cont (1D model)', ls='-', lw=4)
     name = '{0}_{1:05d}.1D.fits'.format(root_name, id)
     if os.path.exists(name) and '1D' in models:
       f1d = fits.open(name)
@@ -986,17 +998,11 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
         fname = ext.header['EXTNAME']
         d = f1d[fname].data
         wave,flux,cont,line,flat,err = d['wave'], d['flux'], d['cont'], d['line'], d['flat'], d['err']
-        ax.plot(wave, flux/flat, color='blue',  label='{} flux'.format(fname), ls=ls[fname])
-        ax.plot(wave, cont/flat, color='green', label='{} cont'.format(fname), ls=ls[fname])
-        ax.plot(wave, line/flat, color='red',   label='{} line'.format(fname), ls=ls[fname])
-    name = '{0}_{1:05d}.full.fits'.format(root_name, id)
-    if os.path.exists(name) and 'TEMP' in models:
-      ff  = fits.open(name)
-      temp = ff['TEMPL'].data
-      wave, cont, full = temp['wave'], temp['continuum'], temp['full']
-      mask = (wave>8000)&(wave<17000)
-      ax.plot(wave[mask], full[mask], alpha=0.4, color='cyan', label='temp full', ls='-')
-      ax.plot(wave[mask], cont[mask], alpha=0.4, color='brown',  label='temp cont', ls='-')
+        #ax.plot(wave, flux/flat, color=colors[fname], label='{} flux'.format(fname), ls='-', lw=2, alpha=0.5)
+        ax.scatter(wave, flux/flat, color=colors[fname], label='{} flux (data)'.format(fname), marker='.', alpha=0.3, s=50)
+        ax.errorbar(wave, flux/flat, err/flat, color=colors[fname], alpha=0.3, ls='none')
+        ax.plot(wave, cont/flat, color=colors[fname], label='{} cont (2D model)'.format(fname), ls='--', lw=3)
+        ax.plot(wave, (line)/flat, color=colors[fname], label='{} cont+line (2D model)'.format(fname), ls=':', lw=3)
     if mbplots_sci is not None:
       for i, (wave, flux, err) in enumerate(mbplots_sci):
         if i==0:
@@ -1013,17 +1019,17 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
     ax.set_ylabel(r'$f_\lambda$ erg s$^{-1}$ cm$^{-2}$ $\AA$')
     if limits:
       ax.set_ylim(limits)
-    axu = ax.twiny()
-    axu.tick_params(axis="x",direction="in", pad=-15)
-    xticks = copy.deepcopy(ax.get_xticks())
-    xlim = ax.get_xlim()
-    for i in range(len(xticks)):
-      xticks[i] /= (1+redshift)
-    axu.set_xticks(xticks)
-    axu.set_xlim(xlim[0]/(1+redshift), xlim[1]/(1+redshift))
   if '2D' in models:
     for lim,ax in zip(axis_x_limis, todo_axis):
-      ax.set_xlim(*lim) 
+      ax.set_xlim(*lim)
+      axu = ax.twiny()
+      axu.tick_params(axis="x",direction="in", pad=-15)
+      xticks = copy.deepcopy(ax.get_xticks())
+      xlim = ax.get_xlim()
+      for i in range(len(xticks)):
+        xticks[i] /= (1+redshift)
+      axu.set_xticks(xticks)
+      axu.set_xlim(xlim[0]/(1+redshift), xlim[1]/(1+redshift))
 
   if tfit_fits is not None:
     from astropy.table import Table
@@ -1064,14 +1070,21 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
     redshift=0
 
   fig.tight_layout()
-  result = {
-    "mb":mb,
-    "mb_sci":mbplots_sci,
-    "full": tfit_fits
-  }
+  for each in [
+      'redshift',
+      'PAs',
+      'fstack',
+      'mb',
+      'mbplots_sci',
+      'f30',
+      'f1d',
+      'ff',
+    ]:
+    result[each] = locals().get(each)
   return result
 
 def extract_single_beams(beams, tfit_fits=None):
+  '''some of the code are from fitting.py/GroupFitter/oned_figure in the Grizli package'''
   sci   = []
   # model = []
   bin=1
