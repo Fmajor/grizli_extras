@@ -272,9 +272,6 @@ def zscale_imshow(data,
             imshow(ax, dcol)
   return fig
 
-def test():
-  print('kuku')
-
 def show_flt_images(flt, figsize=(15,7.5)):
   z = ZScaleInterval()
   filter = flt.grism.filter
@@ -1016,7 +1013,8 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
     ax.set_ylabel(r'$f_\lambda$ erg s$^{-1}$ cm$^{-2}$ $\AA$')
     if limits:
       ax.set_ylim(limits)
-    axu = ax.twinx()
+    axu = ax.twiny()
+    axu.tick_params(axis="x",direction="in", pad=-15)
     xticks = copy.deepcopy(ax.get_xticks())
     xlim = ax.get_xlim()
     for i in range(len(xticks)):

@@ -17,6 +17,7 @@ install_requires=[
   'matplotlib',
   'numpy',
   'astropy',
+  'mocpy',
   "scipy",
   "termcolor",
   "pyds9@git+https://github.com/ericmandel/pyds9.git#egg=pyds9",
