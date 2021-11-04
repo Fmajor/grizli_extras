@@ -138,11 +138,16 @@ class StepRunning(object):
     self.l = logger
     self.locals = {}
     self.skip_functions = {}
+    if not hasattr(self, 'only'):
+      self.only = []
+    if not hasattr(self, 'skip'):
+      self.skip = []
   def _run(self, rerun=False, **kwargs):
     self.tee = Tee(self.log_debug_file, unbuffered=True)
     now = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(time.time()))
     self.l.info('==========={}==========='.format(now))
     running_tasks = list(filter(lambda _:not _.startswith("skip_"), self.tasks))
+    error_flag = False
     for i, name in enumerate(running_tasks):
       task = getattr(self, name)
       try:
@@ -177,6 +182,7 @@ class StepRunning(object):
         output = '\n'.join(output)
         self.l.error('  error:\n{}'.format(output))
         self.l.error('unfinished steps: {}'.format(running_tasks[i:]))
+        error_flag = True
         break
     try:
       if hasattr(self, 'always'):
@@ -188,6 +194,8 @@ class StepRunning(object):
       output = list(map(lambda _:'  '+_, ss))
       output = '\n'.join(output)
       self.l.error('  always error:\n{}'.format(output))
+    if not error_flag:
+      self.l.info('done')
     self.tee.__del__()
 
 def create_nb():
@@ -625,6 +633,7 @@ class NB(object):
 
 if __name__ == '__main__':
   if 'test step running' and 1:
+    run_good = 0
     class S(StepRunning):
       class first_step:
         def skip(self):
@@ -643,11 +652,13 @@ if __name__ == '__main__':
       class third_step:
         def run(self):
           print('from third step')
-          raise
+          if not run_good:
+            raise
       class last_step:
         def run(self):
           print('from last step')
-          raise
+          if not run_good:
+            raise
     s = S()
     s._run()
   if 'test nb' and 0:
