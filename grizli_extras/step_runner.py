@@ -646,6 +646,8 @@ if __name__ == '__main__':
           print('from first step 0')
           print('from first step 1')
           print('from first step 23\n45')
+        def always(self):
+          print('always run in first step')
       class second_step:
         def skip(self):
           return False
