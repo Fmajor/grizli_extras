@@ -588,9 +588,10 @@ def show_id_beam(id, fltid, grp, ds9=False, todos=['image', 'grism', 'beams', '1
                   elif j==1:
                     ax.set_title('seg')
                   elif j==2:
-                    ax.set_title('SCI-contam model')
+                    ax.set_title('SCI-contam model (residual+beam model)')
                   elif j==3:
-                    ax.set_title("residual(SCI-contam model-beam model)")
+                    #ax.set_title("residual(SCI-contam model-beam model)")
+                    ax.set_title("contam model")
                 sh = todo.shape
                 extent = [0, sh[1], 0, sh[0]]
                 if j==1:
