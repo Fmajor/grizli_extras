@@ -346,7 +346,7 @@ def show_flt_model(flt, figsize=(10,10)):
   imshow(ax, residual); ax.set_anchor('W')
   fig.tight_layout()
   return fig
-def show_id_beam(id, fltid, grp, ds9=False, todos=['image', 'grism', 'beams', '1d', 'decontam', 'gbeam'], show_beams=True, show_grism=True, allbeams=False):
+def show_id_beam(id, fltid, grp, ds9=False, todos=['image', 'grism', 'beams', '1d', 'decontam', 'gbeam'], show_beams=True, show_grism=True, allbeams=False, save=False):
   from matplotlib.patches import Rectangle
   z = ZScaleInterval()
   flt = grp.FLTs[fltid]
@@ -631,7 +631,10 @@ def show_id_beam(id, fltid, grp, ds9=False, todos=['image', 'grism', 'beams', '1
     ds9.set('frame 1')
     ds9.set_np2arr(flt.seg)
     ds9.set('frame 2')
-    ds9.set_fits(fits.HDUList([fits.PrimaryHDU(flt.direct.data[flt.direct.thumb_extension], header=flt.direct.header)]))
+    if hasattr(ds9, 'set_fits'):
+      ds9.set_fits(fits.HDUList([fits.PrimaryHDU(flt.direct.data[flt.direct.thumb_extension], header=flt.direct.header)]))
+    else:
+      ds9.set_pyfits(fits.HDUList([fits.PrimaryHDU(flt.direct.data[flt.direct.thumb_extension], header=flt.direct.header)]))
     ds9.set('frame 3')
     ds9.set_np2arr(flt.model)
     ds9.set('frame 1')
@@ -653,6 +656,16 @@ def show_id_beam(id, fltid, grp, ds9=False, todos=['image', 'grism', 'beams', '1
             [
               flt.direct.data[flt.direct.thumb_extension],
               flt.model,
+            ],
+            figsize=(40,20)
+          )
+          ax_grism.add_patch(Rectangle((x-dx, y-dy), dx*2, dy*2, color='red', fc='none', lw=2))
+        elif 'image' in todos and 'igrism' in todos:
+          zscale_imshow([[beam.direct, beam.seg==id]], title=title)
+          ax_image, ax_grism = imshow2(
+            [
+              flt.direct.data[flt.direct.thumb_extension],
+              flt.grism.data['SCI'],
             ],
             figsize=(40,20)
           )
@@ -710,13 +723,13 @@ def show_id_beam(id, fltid, grp, ds9=False, todos=['image', 'grism', 'beams', '1
         if i==0:
           beam0  = beam
           bname0 = bname
-      if 'grism' in todos:
+      if 'grism' in todos or 'igrism' in todos:
         if (show_beams or i==0) and not '1d' in todos:
           imshowb(beam.model, vmin=vmin, vmax=vmax, figsize=(15,5), bname=bname)
         if show_grism:
-          ax_grism.add_patch(Rectangle((sx, sy), ex-sx, ey-sy, color='red', fc='none', lw=2))
+          ax_grism.add_patch(Rectangle((sx, sy-(i+1)*2), ex-sx, ey-sy+(i+1)*2*2, color='red', fc='none', lw=2))
           if 0<tx<flt.model.shape[0]:
-            ax_grism.text(tx, ty, text, color='red')
+            ax_grism.text(tx, ty, text, color='red', fontdict={'size': 20})
         if ds9:
           rcommand = '''regions command 'box {x} {y} {dxx} {dyy} 0 # color=red' '''.format(
             dxx=ex-sx,dyy=ey-sy, x=(sx+ex)/2, y=(sy+ey)/2,
@@ -726,6 +739,9 @@ def show_id_beam(id, fltid, grp, ds9=False, todos=['image', 'grism', 'beams', '1
             x=tx, y=ty, text=text
           )
           ds9.set(rcommand)
+        if save:
+          ax_image.figure.savefig('image.png', dpi=100)
+          ax_grism.figure.savefig('grism.png', dpi=100)
       #ax = imshow(a.modelf.reshape(a.sh_beam), kwargs_fig=dict(figsize=(15,20)))
       #ax = imshow(flt.model[a.sly_parent, a.slx_parent], kwargs_fig=dict(figsize=(15,20)))
       #ax = imshow(flt.grism['SCI'][a.sly_parent, a.slx_parent], kwargs_fig=dict(figsize=(15,20)))
@@ -972,6 +988,8 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
     mb = None
     mbplots_sci = None
 
+  max = -np.inf
+  min =  np.inf
   for ax in todo_axis:
     colors = { "G102": 'green', "G141": 'orange', }
     ls = { "G102": '--', "G141": '-.', }
@@ -984,6 +1002,10 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
         wave,flux,cont,line,flat,err = d['wave'], d['flux'], d['cont'], d['line'], d['flat'], d['err']
         ax.scatter(wave, flux/flat, color=colors[fname], label='{} R30'.format(fname), marker="^")
         ax.errorbar(wave, flux/flat, err/flat, ls='none', color=colors[fname],)
+        _max = np.nanmax(flux/flat)
+        _min = np.nanmin(flux/flat)
+        if _max>max: max=_max
+        if _min<min: min=_min
     name = '{0}_{1:05d}.full.fits'.format(root_name, id)
     if os.path.exists(name) and 'TEMP' in models:
       ff  = fits.open(name)
@@ -992,6 +1014,14 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
       mask = (wave>8000)&(wave<17000)
       ax.plot(wave[mask], full[mask], alpha=0.4, color='cyan', label='temp cont+line (1D model)', ls=':', lw=4)
       ax.plot(wave[mask], cont[mask], alpha=0.4, color='brown',  label='temp cont (1D model)', ls='-', lw=4)
+      _max = np.nanmax(full[mask])
+      _min = np.nanmin(full[mask])
+      if _max>max: max=_max
+      if _min<min: min=_min
+      _max = np.nanmax(cont[mask])
+      _min = np.nanmin(cont[mask])
+      if _max>max: max=_max
+      if _min<min: min=_min
     name = '{0}_{1:05d}.1D.fits'.format(root_name, id)
     if os.path.exists(name) and '1D' in models:
       f1d = fits.open(name)
@@ -1002,15 +1032,27 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
         #ax.plot(wave, flux/flat, color=colors[fname], label='{} flux'.format(fname), ls='-', lw=2, alpha=0.5)
         ax.scatter(wave, flux/flat, color=colors[fname], label='{} flux (data)'.format(fname), marker='.', alpha=0.3, s=50)
         ax.errorbar(wave, flux/flat, err/flat, color=colors[fname], alpha=0.3, ls='none')
+        _max = np.nanmax(flux/flat)
+        _min = np.nanmin(flux/flat)
+        if _max>max: max=_max
+        if _min<min: min=_min
         if not only_flux:
           ax.plot(wave, cont/flat, color=colors[fname], label='{} cont (2D model)'.format(fname), ls='--', lw=3)
           ax.plot(wave, (line)/flat, color=colors[fname], label='{} cont+line (2D model)'.format(fname), ls=':', lw=3)
+          _max = np.nanmax(cont/flat)
+          _min = np.nanmin(cont/flat)
+          if _max>max: max=_max
+          if _min<min: min=_min
     if mbplots_sci is not None:
       for i, (wave, flux, err) in enumerate(mbplots_sci):
         if i==0:
           ax.errorbar(wave, flux, err, alpha=0.5/mb.N, color='k', label='single sci')
         else:
           ax.errorbar(wave, flux, err, alpha=0.5/mb.N, color='k')
+        _max = np.nanmax(flux)
+        _min = np.nanmin(flux)
+        if _max>max: max=_max
+        if _min<min: min=_min
       #for i, (wave, flux, err) in enumerate(mbplots_model):
       #  ax.scatter(wave, flux, err, alpha=1/mb.N, color='red')
       #  if i==0:
@@ -1019,8 +1061,11 @@ def plot_id_output(id, *, root_name, limits=None, models=['R30', '1D', 'TEMP', '
       #    ax.errorbar(wave, flux, err, alpha=1/mb.N, color='red')
     ax.legend()
     ax.set_ylabel(r'$f_\lambda$ erg s$^{-1}$ cm$^{-2}$ $\AA$')
+  for ax in todo_axis:
     if limits:
       ax.set_ylim(limits)
+    else:
+      ax.set_ylim([min*0.8, max*1.1])
   if '2D' in models:
     for lim,ax in zip(axis_x_limis, todo_axis):
       ax.set_xlim(*lim)

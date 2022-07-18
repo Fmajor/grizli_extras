@@ -99,12 +99,14 @@ class StepRunning(object):
   def __init__(self,
       configs=None,
       log_root='logs',
+      debug=False,
     ):
     self.tasks = inspect.getmembers(self)
     self.tasks.sort(key=linenumber_of_member)
     self.tasks = list(filter(lambda _:isinstance(_[1], type) and not _[0].startswith('_'), self.tasks))
     self.tasks = list(map(lambda _:_[0], self.tasks))
     self.log_root = log_root
+    self.debug = debug
     if configs is not None:
       self.configs = {}
 
@@ -183,6 +185,8 @@ class StepRunning(object):
         self.l.error('  error:\n{}'.format(output))
         self.l.error('unfinished steps: {}'.format(running_tasks[i:]))
         error_flag = True
+        if self.debug:
+          raise
         break
     try:
       if hasattr(self, 'always'):
